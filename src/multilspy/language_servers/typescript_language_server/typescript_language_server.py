@@ -18,6 +18,7 @@ from multilspy.lsp_protocol_handler.server import ProcessLaunchInfo
 from multilspy.lsp_protocol_handler.lsp_types import InitializeParams
 from multilspy.multilspy_config import MultilspyConfig
 from multilspy.multilspy_utils import PlatformUtils, PlatformId
+import traceback
 
 
 # Conditionally import pwd module (Unix-only)
@@ -46,69 +47,115 @@ class TypeScriptLanguageServer(LanguageServer):
 
     def setup_runtime_dependencies(self, logger: MultilspyLogger, config: MultilspyConfig) -> str:
         """
-        Setup runtime dependencies for TypeScript Language Server.
+        Setup runtime dependencies for TypeScript Language Server with detailed debugging using print statements.
         """
-        platform_id = PlatformUtils.get_platform_id()
+        try:
+            print("[INFO] Starting setup_runtime_dependencies")
+            platform_id = PlatformUtils.get_platform_id()
+            print(f"[INFO] Detected platform: {platform_id}")
 
-        valid_platforms = [
-            PlatformId.LINUX_x64, 
-            PlatformId.LINUX_arm64,
-            PlatformId.OSX, 
-            PlatformId.OSX_x64,
-            PlatformId.OSX_arm64,
-            PlatformId.WIN_x64, 
-            PlatformId.WIN_arm64, 
-        ] 
-        assert platform_id in valid_platforms, f"Platform {platform_id} is not supported for multilspy javascript/typescript at the moment"
+            valid_platforms = [
+                PlatformId.LINUX_x64,
+                PlatformId.LINUX_arm64,
+                PlatformId.OSX,
+                PlatformId.OSX_x64,
+                PlatformId.OSX_arm64,
+                PlatformId.WIN_x64,
+                PlatformId.WIN_arm64,
+            ]
+            if platform_id not in valid_platforms:
+                msg = f"Platform {platform_id} is not supported for multilspy javascript/typescript at the moment"
+                print(f"[ERROR] {msg}")
+                raise AssertionError(msg)
 
-        with open(os.path.join(os.path.dirname(__file__), "runtime_dependencies.json"), "r") as f:
-            d = json.load(f)
-            del d["_description"]
+        except Exception as e:
+            print(f"[ERROR] Error validating platform: {e}\n{traceback.format_exc()}")
+            raise
 
-        runtime_dependencies = d.get("runtimeDependencies", [])
-        original_path = os.path.dirname(__file__)
-        src_index = original_path.find('site-packages/')
-        relative_path = original_path[src_index:]  # includes 'src/...'
-        new_path = os.path.join('/tmp', relative_path)
-        tsserver_ls_dir = os.path.join(new_path, "static", "ts-lsp")
-        tsserver_executable_path = os.path.join(tsserver_ls_dir, "typescript-language-server")
+        # Load runtime dependencies
+        try:
+            runtime_json_path = os.path.join(os.path.dirname(__file__), "runtime_dependencies.json")
+            print(f"[INFO] Loading runtime dependencies from {runtime_json_path}")
+            with open(runtime_json_path, "r") as f:
+                d = json.load(f)
+                print("[INFO] Loaded JSON successfully")
+                d.pop("_description", None)
+                runtime_dependencies = d.get("runtimeDependencies", [])
+                print(f"[INFO] Found {len(runtime_dependencies)} runtime dependencies")
+        except Exception as e:
+            print(f"[ERROR] Error loading runtime_dependencies.json: {e}\n{traceback.format_exc()}")
+            raise
 
-        # Verify both node and npm are installed
-        is_node_installed = shutil.which('node') is not None
-        assert is_node_installed, "node is not installed or isn't in PATH. Please install NodeJS and try again."
-        is_npm_installed = shutil.which('npm') is not None
-        assert is_npm_installed, "npm is not installed or isn't in PATH. Please install npm and try again."
+        # Compute paths
+        try:
+            original_path = os.path.dirname(__file__)
+            print(f"[INFO] Original path: {original_path}")
+            src_index = original_path.find('site-packages/')
+            if src_index == -1:
+                msg = "'site-packages/' not found in path"
+                print(f"[ERROR] {msg}")
+                raise ValueError(msg)
+            relative_path = original_path[src_index:]
+            new_path = os.path.join('/tmp', relative_path)
+            tsserver_ls_dir = os.path.join(new_path, "static", "ts-lsp")
+            print(f"[INFO] Target ts-lsp directory: {tsserver_ls_dir}")
+        except Exception as e:
+            print(f"[ERROR] Error computing paths: {e}\n{traceback.format_exc()}")
+            raise
 
-        # Install typescript and typescript-language-server if not already installed
-        if not os.path.exists(tsserver_ls_dir):
-            os.makedirs(tsserver_ls_dir, exist_ok=True)
-            for dependency in runtime_dependencies:
-                # Windows doesn't support the 'user' parameter and doesn't have pwd module
-                if PlatformUtils.get_platform_id().value.startswith("win"):
-                    subprocess.run(
-                        dependency["command"], 
-                        shell=True, 
-                        check=True, 
-                        cwd=tsserver_ls_dir,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                else:
-                    # On Unix-like systems, run as non-root user
-                    user = pwd.getpwuid(os.getuid()).pw_name
-                    subprocess.run(
-                        dependency["command"], 
-                        shell=True, 
-                        check=True, 
-                        user=user, 
-                        cwd=tsserver_ls_dir,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-        
-        tsserver_executable_path = os.path.join(tsserver_ls_dir, "node_modules", ".bin", "typescript-language-server")
-        assert os.path.exists(tsserver_executable_path), "typescript-language-server executable not found. Please install typescript-language-server and try again."
-        return f"{tsserver_executable_path} --stdio"
+        # Verify Node and npm
+        try:
+            print("[INFO] Checking for node installation")
+            assert shutil.which('node'), "node is not installed or isn't in PATH"
+            print("[INFO] Node found")
+            print("[INFO] Checking for npm installation")
+            assert shutil.which('npm'), "npm is not installed or isn't in PATH"
+            print("[INFO] npm found")
+        except AssertionError as e:
+            print(f"[ERROR] Dependency check failed: {e}")
+            raise
+        except Exception as e:
+            print(f"[ERROR] Unexpected error checking dependencies: {e}\n{traceback.format_exc()}")
+            raise
+
+        # Install dependencies if needed
+        try:
+            if not os.path.exists(tsserver_ls_dir):
+                print(f"[INFO] Creating directory {tsserver_ls_dir}")
+                os.makedirs(tsserver_ls_dir, exist_ok=True)
+                for dependency in runtime_dependencies:
+                    cmd = dependency.get("command")
+                    print(f"[INFO] Running install command: {cmd} in {tsserver_ls_dir}")
+                    try:
+                        platform_id = PlatformUtils.get_platform_id()
+                        if platform_id.startswith("win"):
+                            subprocess.run(cmd, shell=True, check=True, cwd=tsserver_ls_dir,
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        else:
+                            user = pwd.getpwuid(os.getuid()).pw_name
+                            subprocess.run(cmd, shell=True, check=True, cwd=tsserver_ls_dir, user=user,
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        print(f"[INFO] Successfully installed dependency with command: {cmd}")
+                    except subprocess.CalledProcessError as cmd_e:
+                        print(f"[ERROR] Command failed: {cmd} with error: {cmd_e}\n{traceback.format_exc()}")
+                        raise
+        except Exception as e:
+            print(f"[ERROR] Error installing runtime dependencies: {e}\n{traceback.format_exc()}")
+            raise
+
+        # Verify final executable
+        try:
+            tsserver_executable = os.path.join(tsserver_ls_dir, "node_modules", ".bin", "typescript-language-server")
+            print(f"[INFO] Verifying executable at {tsserver_executable}")
+            if not os.path.exists(tsserver_executable):
+                msg = "typescript-language-server executable not found. Please install typescript-language-server and try again."
+                print(f"[ERROR] {msg}")
+                raise FileNotFoundError(msg)
+            print("[INFO] typescript-language-server found")
+            return f"{tsserver_executable} --stdio"
+        except Exception as e:
+            print(f"[ERROR] Error verifying tsserver executable: {e}\n{traceback.format_exc()}")
+            raise
 
     def _get_initialize_params(self, repository_absolute_path: str) -> InitializeParams:
         """
