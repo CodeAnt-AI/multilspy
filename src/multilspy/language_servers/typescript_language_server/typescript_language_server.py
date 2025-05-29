@@ -122,7 +122,8 @@ class TypeScriptLanguageServer(LanguageServer):
         try:
             if not os.path.exists(tsserver_ls_dir):
                 print(f"[INFO] Creating directory {tsserver_ls_dir}")
-                os.makedirs(tsserver_ls_dir, exist_ok=True)
+                os.makedirs(tsserver_ls_dir, exist_ok=True, mode=0o777)
+                os.chmod(tsserver_ls_dir, 0o777)
                 for dependency in runtime_dependencies:
                     cmd = dependency.get("command")
                     print(f"[INFO] Running install command: {cmd} in {tsserver_ls_dir}")
