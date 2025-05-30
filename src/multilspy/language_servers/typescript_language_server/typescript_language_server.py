@@ -96,7 +96,7 @@ class TypeScriptLanguageServer(LanguageServer):
                 print(f"[ERROR] {msg}")
                 raise ValueError(msg)
             relative_path = original_path[src_index:]
-            new_path = os.path.join('/tmp', relative_path)
+            new_path = os.path.join('/tmp', "")
             tsserver_ls_dir = os.path.join(new_path, "static", "ts-lsp")
             print(f"[INFO] Target ts-lsp directory: {tsserver_ls_dir}")
         except Exception as e:
