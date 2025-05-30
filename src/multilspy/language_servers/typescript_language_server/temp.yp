@@ -1,0 +1,32 @@
+           
+           Generation                                   Obivious       1. Exhaustive
+               |
+               |
+    ------------------------
+Non Intuitive           Intuitive                      Proove the applicability/validity of the suggestion               2. Context
+(Not Applicable)        (Applicable)
+=DISCARD=                   |
+                            |
+                    ----------------------
+                    |                    |
+                    |                    |
+                Complete Fix          Incomplete Fix.                   3. Minimal change 
+                (Commitable).     (Require Larger Refactoring)                  
+                    |                   (PR Feedback)
+                    |                    |
+                Consolidate              |
+                (Keep Short)             |
+                    |                    |
+                    |                    |
+                Line Numbers        Line Numbers
+                 Generation          Generation
+
+
+                    |                   |
+                    |___________________|
+                            |  
+                            |
+                    Update PR Feedback
+                    (Remove Commitable Suggestions)
+                    (Remove Incomplete Suggestions)
+                    (Add Incomplete Suggestions to new box)

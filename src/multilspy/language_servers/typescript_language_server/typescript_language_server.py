@@ -19,7 +19,7 @@ from multilspy.lsp_protocol_handler.lsp_types import InitializeParams
 from multilspy.multilspy_config import MultilspyConfig
 from multilspy.multilspy_utils import PlatformUtils, PlatformId
 import traceback
-
+import stat
 
 # Conditionally import pwd module (Unix-only)
 if not PlatformUtils.get_platform_id().value.startswith("win"):
