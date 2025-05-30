@@ -133,6 +133,7 @@ class TypeScriptLanguageServer(LanguageServer):
                             subprocess.run(cmd, shell=True, check=True, cwd=tsserver_ls_dir,
                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                         else:
+                            user = pwd.getpwuid(os.getuid()).pw_name
                             print(f"[DEBUG] Running as user: {user} (UID={os.getuid()}, GID={os.getgid()})")
                             # print out directory permissions and ownership for debugging
                             stat_info = os.stat(tsserver_ls_dir)
