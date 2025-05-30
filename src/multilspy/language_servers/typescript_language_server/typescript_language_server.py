@@ -133,10 +133,20 @@ class TypeScriptLanguageServer(LanguageServer):
                             subprocess.run(cmd, shell=True, check=True, cwd=tsserver_ls_dir,
                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                         else:
-                            user = pwd.getpwuid(os.getuid()).pw_name
-                            subprocess.run(cmd, shell=True, check=True, cwd=tsserver_ls_dir, user=user,
-                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                        print(f"[INFO] Successfully installed dependency with command: {cmd}")
+                            print(f"[DEBUG] Running as user: {user} (UID={os.getuid()}, GID={os.getgid()})")
+                            # print out directory permissions and ownership for debugging
+                            stat_info = os.stat(tsserver_ls_dir)
+                            print(f"[DEBUG] {tsserver_ls_dir} perms={oct(stat_info.st_mode)} owner={stat_info.st_uid}:{stat_info.st_gid}")
+                            # print out directory permissions and ownership for debugging
+                            stat_info = os.stat(tsserver_ls_dir)
+                            mode_octal = oct(stat.S_IMODE(stat_info.st_mode))
+                            mode_str  = stat.filemode(stat_info.st_mode)
+                            print(f"[DEBUG] {tsserver_ls_dir} owner={stat_info.st_uid}:{stat_info.st_gid}")
+                            print(f"[DEBUG] {tsserver_ls_dir} perms (octal)={mode_octal}")
+                            print(f"[DEBUG] {tsserver_ls_dir} perms (string)={mode_str}")
+                            subprocess.run(cmd, shell=True, check=True, cwd=tsserver_ls_dir,
+                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            print(f"[INFO] Successfully installed dependency with command: {cmd}")
                     except subprocess.CalledProcessError as cmd_e:
                         print(f"[ERROR] Command failed: {cmd} with error: {cmd_e}\n{traceback.format_exc()}")
                         raise
